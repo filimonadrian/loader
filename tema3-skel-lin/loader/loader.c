@@ -31,11 +31,9 @@ void write_pages(so_seg_t *segment, int start_page, int page_size,
 	if (addr == NULL)
 		return;
 
-	if ((page_address + page_size >= segment->file_size)) {
-	/* memset to */
-	memset((void *)segment->vaddr + segment->file_size, 0,
-		(page_index + 1) * page_size - segment->file_size);
-	}
+	if ((page_address + page_size >= segment->file_size))
+		memset((void *)segment->vaddr + segment->file_size, 0,
+			(page_index + 1) * page_size - segment->file_size);
 
 	mprotect(addr, page_size, segment->perm);
 	valid_pages[page_index] = 1;
@@ -73,7 +71,7 @@ static void sig_handler(int signum, siginfo_t *info, void *context)
 		segment = &exec->segments[i];
 		valid_pages = (int *)(segment->data);
 
-		/* every segment has start, size and permissions 
+		/* every segment has start, size and permissions
 		 * calculate the end of the segment
 		 */
 		end_segment = segment->vaddr + segment->mem_size;
@@ -97,17 +95,15 @@ static void sig_handler(int signum, siginfo_t *info, void *context)
 			/* page address were error occured */
 			page_address = page_index * page_size;
 
-			if (segment->file_size <= page_address) {
+			if (segment->file_size <= page_address)
 				map_page(segment, start_page,
 					page_size, page_index);
-				return;
 
-			} else {
+			else
 				write_pages(segment, start_page,
 						page_size, page_index,
 						page_address, file_offset);
-				return;
-			}
+			return;
 		}
 	}
 
@@ -143,9 +139,8 @@ int so_execute(char *path, char *argv[])
 		return -1;
 
 	fd = open(path, O_RDONLY);
-	if (fd < 0) {
+	if (fd < 0)
 		return -1;
-	}
 
 	/* for every segment */
 	for (i = 0; i < exec->segments_no; i++) {
