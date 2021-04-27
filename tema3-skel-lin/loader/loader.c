@@ -17,13 +17,52 @@
 #include "exec_parser.h"
 
 static so_exec_t *exec;
-static int fd = 0;
+static int fd;
 struct sigaction old_handler;
+
+void write_pages(so_seg_t *segment, int start_page, int page_size,
+		int page_index, int page_address, int file_offset)
+{
+	void *addr = NULL;
+	int *valid_pages = (int *)(segment->data);
+
+	addr = mmap((void *)start_page, page_size, PROT_WRITE,
+			MAP_PRIVATE | MAP_FIXED, fd, file_offset);
+	if (addr == NULL)
+		return;
+
+	if ((page_address + page_size >= segment->file_size)) {
+	/* memset to */
+	memset((void *)segment->vaddr + segment->file_size, 0,
+		(page_index + 1) * page_size - segment->file_size);
+	}
+
+	mprotect(addr, page_size, segment->perm);
+	valid_pages[page_index] = 1;
+}
+
+void map_page(so_seg_t *segment, int start_page, int page_size, int page_index)
+{
+	void *addr = NULL;
+	int *valid_pages = (int *)(segment->data);
+
+	addr = mmap((void *)start_page, page_size, PROT_WRITE,
+			MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+	/* if mmap fails */
+	if (addr == NULL)
+		return;
+
+	/* protect page with segment permissions */
+	mprotect(addr, page_size, segment->perm);
+
+	/* mark page as valid */
+	valid_pages[page_index] = 1;
+}
 
 static void sig_handler(int signum, siginfo_t *info, void *context)
 {
 	so_seg_t *segment = NULL;
-	void *ret = NULL;
 	int *valid_pages;
 	int page_size = getpagesize();
 	int i = 0;
@@ -60,41 +99,14 @@ static void sig_handler(int signum, siginfo_t *info, void *context)
 			page_address = page_index * page_size;
 
 			if (segment->file_size <= page_address) {
-				ret = mmap((void *)start_page, page_size,
-					PROT_WRITE,
-					MAP_PRIVATE | MAP_ANONYMOUS,
-					-1, 0);
-
-				/* if mmap fails */
-				if (ret == NULL)
-					return;
-
-				/* protect page with segment permissions */
-				mprotect(ret, page_size, segment->perm);
-				/* mark page as valid */
-				valid_pages[page_index] = 1;
+				map_page(segment, start_page,
+					page_size, page_index);
 				return;
 
 			} else {
-				ret = mmap((void *)start_page, page_size,
-					PROT_WRITE,
-					MAP_PRIVATE | MAP_FIXED,
-					fd, file_offset);
-				if (ret == NULL)
-					return;
-
-				if ((page_address + page_size >=
-					segment->file_size)) {
-
-					memset((void * )segment->vaddr +
-						segment->file_size,
-						0,
-						(page_index + 1) * page_size -
-						segment->file_size);
-				}
-
-				mprotect(ret, page_size, segment->perm);
-				valid_pages[page_index] = 1;
+				write_pages(segment, start_page,
+						page_size, page_index,
+						page_address, file_offset);
 				return;
 			}
 		}
@@ -102,6 +114,7 @@ static void sig_handler(int signum, siginfo_t *info, void *context)
 
 	old_handler.sa_sigaction(signum, info, context);
 }
+
 
 int so_init_loader(void)
 {
