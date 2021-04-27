@@ -68,7 +68,7 @@ static void sig_handler(int signum, siginfo_t *info, void *context)
 	int i = 0;
 	int start_page = 0, end_segment = 0;
 	int page_index = 0, file_offset = 0, page_address = 0;
-	
+
 	for (i = 0; i < exec->segments_no; i++) {
 		segment = &exec->segments[i];
 		valid_pages = (int *)(segment->data);
@@ -87,9 +87,8 @@ static void sig_handler(int signum, siginfo_t *info, void *context)
 					page_size;
 
 			/* if the page was already mapped */
-			if (valid_pages[page_index] != 0) {
+			if (valid_pages[page_index] != 0)
 				break;
-			}
 
 			/* start of page is segment_start + page_offset */
 			start_page = segment->vaddr + page_index * page_size;
@@ -155,7 +154,7 @@ int so_execute(char *path, char *argv[])
 
 		nr_pages = segment->mem_size / page_size + 1;
 
-		segment->data = calloc (0, nr_pages * sizeof(int));
+		segment->data = calloc(0, nr_pages * sizeof(int));
 		if (segment->data == NULL)
 			return -1;
 	}
