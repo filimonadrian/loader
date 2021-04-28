@@ -1,57 +1,40 @@
-# Skeleton for building a ELF loader
+Name: Filimon Adrian
+Group: 334CC
 
-## Introduction
-This project contains a skeleton for building an
-[ELF](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format) binary
-on-demand loader in Linux. The loader will provide two methods, defined in the
-`loader.h` header:
-* `int so_init_loader(void);` - initializes the on-demand loader
-* `int so_execute(char *path, char *argv[]);` - executes the binary located in
-`path` with the required `argv` arguments.
+# Third Homework - Executables loader
 
-## Content
-The project contains of three components, each of them in its own
-directory:
-* `loader` - a dynamic library that can be used to run ELF binaries. It
-consists of the following files:
-  * `exec_parser.c` - Implements an ELF binary parser.
-  * `exec_parser.h` - The header exposed by the ELF parser.
-  * `loader.h` - The interface of the loader, described in the
-  [Introduction](#introduction) section.
-  * `loader.c` - This is where the loader should be implemented.
-  * `debug.h` - header for the `dprintf` function that can be used for logging
-  and debugging.
-* `exec` - a program that uses the `libso_loader.so` library to run an ELF
-binary received as argument.
-* `test_prog` - an ELF binary used to test the loader implementation.
 
-There project also contains 2 makefiles:
-* `Makefile` - builds the `libso_loader.so` library from the `loader`
-directory
-* `Makefile.example` - builds the `so_exec` and `so_test_prog` binaries from
-the `exec` and `test_prog` directories that can be used to test the loader.
+## Code Organization
 
-## Usage Build the loader:
+For simplicity, I've choosed to store in `void *data` field from `struct so_seg_t` an array of bools, which represents if the page is valid. 
+This aray contains entries for all pages and is modified when a new page is mapped.
+The allocation for valid_pages array:
 ```
-make
+segment->data = calloc(0, nr_pages * sizeof(int));
 ```
 
-This should generate the `libso_loader.so` library. Next, build the example:
+All page mapping logic is implemented in `sig_handler` function.  
+As an overview, this is what sig_handler function does:
+- check every segment and extract array with valid pages from data field.
+- if the segmentation fault address is in this segment, then need to check all pages of this segment
+- the smarter solution was to calculate directy page_index using start_segment address, segfault address and the dimension of a page.
+- **if** the file_size is smaller than page_address, we need to map a new page in RAM **else** we will write the data in the page with segment permissions
 
+
+## Implementation
+
+- I do not know why, but the last test fails. I think there is a little catch, but i did not discovered it yet.
+
+## Usage
+- The exposed interface of the library is present in loader.h header. This contains functions for loader initialization and binary execution.
+
+- For using the `libso_loader.so` library in the project, you need to add `loader.h` header in your source file and specify the path to the libso_loader.so.
+- if you want to generate `libso_loader.so` library, run in a terminal:
 ```
-make -f Makefile.example
+make build
 ```
 
-This should generate the `so_exec` and `so_test_prog` used for the test:
+## Bibliography
+- [Laboratory 6](https://ocw.cs.pub.ro/courses/so/laboratoare/laborator-06)
+- [Linux Manual Page](https://man7.org/linux/man-pages)
 
-```
-LD_LIBRARY_PATH=. ./so_exec so_test_prog
-```
-
-**NOTE:** the skeleton does not have the loader implemented, thus when running
-the command above, your program will crash!
-
-## Notes
-This skeleton is provided by the Operating System team from the University
-Politehnica of Bucharest to their students to help them complete their
-Executable Loader assignment.
